@@ -1,0 +1,139 @@
+<div class="hero">
+  <h1>Hello World!</h1>
+  <p>A full-featured Ruby web app with API, dark mode, and interactive features.</p>
+</div>
+
+<div class="stats">
+  <div class="stat">
+    <div class="stat-value" id="stat-total">0</div>
+    <div class="stat-label">Total Todos</div>
+  </div>
+  <div class="stat">
+    <div class="stat-value" id="stat-done">0</div>
+    <div class="stat-label">Completed</div>
+  </div>
+  <div class="stat">
+    <div class="stat-value" id="stat-pending">0</div>
+    <div class="stat-label">Pending</div>
+  </div>
+  <div class="stat">
+    <div class="stat-value" id="stat-ruby">-</div>
+    <div class="stat-label">Ruby Version</div>
+  </div>
+</div>
+
+<div class="grid-2">
+  <div class="card">
+    <h3>Todo List</h3>
+    <div class="todo-input">
+      <input type="text" id="todo-input" placeholder="What needs to be done?" onkeydown="if(event.key==='Enter') addTodo()">
+      <button class="btn btn-primary" onclick="addTodo()">Add</button>
+    </div>
+    <ul class="todo-list" id="todo-list"></ul>
+    <p id="todo-empty" style="color:var(--text-muted); text-align:center; padding:1rem 0;">No todos yet. Add one above!</p>
+  </div>
+
+  <div>
+    <div class="card" style="text-align:center;">
+      <h3>Live Clock</h3>
+      <div class="clock" id="clock">--:--:--</div>
+      <div class="clock-date" id="clock-date"></div>
+    </div>
+
+    <div class="card">
+      <h3>API Endpoints</h3>
+      <p style="color:var(--text-muted); font-size:0.9rem; margin-bottom:0.75rem;">This app exposes a RESTful JSON API:</p>
+      <code style="font-size:0.85rem; display:block; line-height:1.8; color:var(--primary);">
+        GET &nbsp;&nbsp;/api/todos<br>
+        POST &nbsp;/api/todos<br>
+        PATCH /api/todos/:id<br>
+        DELETE /api/todos/:id<br>
+        GET &nbsp;&nbsp;/api/stats
+      </code>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Clock
+  function updateClock() {
+    const now = new Date();
+    document.getElementById('clock').textContent = now.toLocaleTimeString();
+    document.getElementById('clock-date').textContent = now.toLocaleDateString(undefined, {
+      weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+    });
+  }
+  updateClock();
+  setInterval(updateClock, 1000);
+
+  // Stats
+  async function loadStats() {
+    try {
+      const res = await fetch('/api/stats');
+      const data = await res.json();
+      document.getElementById('stat-total').textContent = data.total;
+      document.getElementById('stat-done').textContent = data.done;
+      document.getElementById('stat-pending').textContent = data.pending;
+      document.getElementById('stat-ruby').textContent = data.ruby_version;
+    } catch(e) {}
+  }
+
+  // Todos
+  async function loadTodos() {
+    try {
+      const res = await fetch('/api/todos');
+      const todos = await res.json();
+      renderTodos(todos);
+      loadStats();
+    } catch(e) {}
+  }
+
+  function renderTodos(todos) {
+    const list = document.getElementById('todo-list');
+    const empty = document.getElementById('todo-empty');
+    list.innerHTML = '';
+    empty.style.display = todos.length ? 'none' : 'block';
+
+    todos.forEach(todo => {
+      const li = document.createElement('li');
+      li.className = 'todo-item' + (todo.done ? ' done' : '');
+      li.innerHTML = `
+        <div class="todo-check" onclick="toggleTodo(${todo.id})">${todo.done ? '&#10003;' : ''}</div>
+        <span class="todo-text">${escapeHtml(todo.text)}</span>
+        <button class="btn btn-danger" onclick="deleteTodo(${todo.id})">Delete</button>
+      `;
+      list.appendChild(li);
+    });
+  }
+
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  async function addTodo() {
+    const input = document.getElementById('todo-input');
+    const text = input.value.trim();
+    if (!text) return;
+    await fetch('/api/todos', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text })
+    });
+    input.value = '';
+    loadTodos();
+  }
+
+  async function toggleTodo(id) {
+    await fetch('/api/todos/' + id, { method: 'PATCH' });
+    loadTodos();
+  }
+
+  async function deleteTodo(id) {
+    await fetch('/api/todos/' + id, { method: 'DELETE' });
+    loadTodos();
+  }
+
+  loadTodos();
+</script>

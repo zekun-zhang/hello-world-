@@ -1,0 +1,58 @@
+require 'sinatra'
+require 'sinatra/json'
+require 'json'
+
+set :port, 8080
+set :bind, '0.0.0.0'
+
+# In-memory todo store
+$todos = []
+$next_id = 1
+
+# Pages
+get '/' do
+  erb :home, layout: :layout
+end
+
+get '/about' do
+  erb :about, layout: :layout
+end
+
+get '/contact' do
+  erb :contact, layout: :layout
+end
+
+# API endpoints
+get '/api/todos' do
+  json $todos
+end
+
+post '/api/todos' do
+  data = JSON.parse(request.body.read)
+  todo = { id: $next_id, text: data['text'], done: false, created_at: Time.now.to_s }
+  $next_id += 1
+  $todos << todo
+  json todo
+end
+
+patch '/api/todos/:id' do
+  todo = $todos.find { |t| t[:id] == params[:id].to_i }
+  halt 404, json(error: 'Not found') unless todo
+  todo[:done] = !todo[:done]
+  json todo
+end
+
+delete '/api/todos/:id' do
+  $todos.reject! { |t| t[:id] == params[:id].to_i }
+  json success: true
+end
+
+get '/api/stats' do
+  json(
+    total: $todos.size,
+    done: $todos.count { |t| t[:done] },
+    pending: $todos.count { |t| !t[:done] },
+    server_time: Time.now.to_s,
+    ruby_version: RUBY_VERSION
+  )
+end

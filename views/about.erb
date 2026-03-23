@@ -1,0 +1,56 @@
+<div class="hero">
+  <h1>About</h1>
+  <p>Learn more about this project and the tech behind it.</p>
+</div>
+
+<div class="grid-2">
+  <div class="card">
+    <h3>The Project</h3>
+    <p style="line-height:1.7; color:var(--text-muted);">
+      This started as a simple "Hello World" repository and evolved into a
+      full-featured web application. It demonstrates how quickly you can build
+      something meaningful with Ruby and Sinatra.
+    </p>
+  </div>
+
+  <div class="card">
+    <h3>Tech Stack</h3>
+    <ul style="list-style:none; line-height:2;">
+      <li><strong style="color:var(--primary);">Ruby</strong> &mdash; Programming language</li>
+      <li><strong style="color:var(--primary);">Sinatra</strong> &mdash; Lightweight web framework</li>
+      <li><strong style="color:var(--primary);">Vanilla JS</strong> &mdash; No frontend framework needed</li>
+      <li><strong style="color:var(--primary);">CSS Variables</strong> &mdash; Dark mode theming</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3>Features</h3>
+    <ul style="list-style:none; line-height:2;">
+      <li>&#9989; Multi-page navigation</li>
+      <li>&#9989; Dark / Light mode toggle</li>
+      <li>&#9989; Interactive todo list</li>
+      <li>&#9989; RESTful JSON API</li>
+      <li>&#9989; Live clock widget</li>
+      <li>&#9989; Responsive design</li>
+      <li>&#9989; Smooth animations</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h3>Server Info</h3>
+    <div id="server-info" style="line-height:2; color:var(--text-muted);">Loading...</div>
+  </div>
+</div>
+
+<script>
+  fetch('/api/stats')
+    .then(r => r.json())
+    .then(data => {
+      document.getElementById('server-info').innerHTML = `
+        <p><strong>Ruby:</strong> ${data.ruby_version}</p>
+        <p><strong>Server Time:</strong> ${data.server_time}</p>
+        <p><strong>Todos Created:</strong> ${data.total}</p>
+        <p><strong>Todos Completed:</strong> ${data.done}</p>
+      `;
+    });
+</script>
