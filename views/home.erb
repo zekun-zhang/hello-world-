@@ -17,8 +17,8 @@
     <div class="stat-label">Pending</div>
   </div>
   <div class="stat">
-    <div class="stat-value" id="stat-ruby">-</div>
-    <div class="stat-label">Ruby Version</div>
+    <div class="stat-value" id="stat-server-time">-</div>
+    <div class="stat-label">Server Time</div>
   </div>
 </div>
 
@@ -74,7 +74,7 @@
       document.getElementById('stat-total').textContent = data.total;
       document.getElementById('stat-done').textContent = data.done;
       document.getElementById('stat-pending').textContent = data.pending;
-      document.getElementById('stat-ruby').textContent = data.ruby_version;
+      document.getElementById('stat-server-time').textContent = data.server_time;
     } catch(e) {}
   }
 

@@ -28,8 +28,15 @@ get '/api/todos' do
 end
 
 post '/api/todos' do
-  data = JSON.parse(request.body.read)
-  todo = { id: $next_id, text: data['text'], done: false, created_at: Time.now.to_s }
+  begin
+    data = JSON.parse(request.body.read)
+  rescue JSON::ParserError
+    halt 400, json(error: 'Invalid JSON')
+  end
+  text = data['text'].to_s.strip
+  halt 400, json(error: 'Text is required') if text.empty?
+  halt 400, json(error: 'Text too long (max 500 characters)') if text.length > 500
+  todo = { id: $next_id, text: text, done: false, created_at: Time.now.to_s }
   $next_id += 1
   $todos << todo
   json todo
@@ -43,7 +50,10 @@ patch '/api/todos/:id' do
 end
 
 delete '/api/todos/:id' do
-  $todos.reject! { |t| t[:id] == params[:id].to_i }
+  id = params[:id].to_i
+  original_size = $todos.size
+  $todos.reject! { |t| t[:id] == id }
+  halt 404, json(error: 'Not found') if $todos.size == original_size
   json success: true
 end
 
@@ -52,7 +62,6 @@ get '/api/stats' do
     total: $todos.size,
     done: $todos.count { |t| t[:done] },
     pending: $todos.count { |t| !t[:done] },
-    server_time: Time.now.to_s,
-    ruby_version: RUBY_VERSION
+    server_time: Time.now.to_s
   )
 end
