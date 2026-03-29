@@ -40,7 +40,6 @@ post '/api/todos' do
   halt 400, json(error: 'text cannot be empty') if text.empty?
   halt 400, json(error: 'text too long (max 500 characters)') if text.length > 500
 
-
   todo = { id: $next_id, text: text, done: false, created_at: Time.now.to_s }
   $next_id += 1
   $todos << todo
