@@ -35,10 +35,10 @@ post '/api/todos' do
   end
 
   text = data['text']
-  halt 400, json(error: 'text is required') if text.nil? || !text.is_a?(String)
+  halt 400, json(error: 'text is required') unless text.is_a?(String)
   text = text.strip
   halt 400, json(error: 'text cannot be empty') if text.empty?
-  halt 400, json(error: 'text too long (max 500 characters)') if text.length > 500
+  halt 400, json(error: 'text is too long (max 500 characters)') if text.length > 500
 
   todo = { id: $next_id, text: text, done: false, created_at: Time.now.to_s }
   $next_id += 1
