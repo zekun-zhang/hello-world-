@@ -49,14 +49,15 @@
       const container = document.getElementById('server-info');
       container.innerHTML = '';
       [
+        ['Server Time', data.server_time],
         ['Todos Created', data.total],
         ['Todos Completed', data.done]
       ].forEach(([label, value]) => {
         const p = document.createElement('p');
         const strong = document.createElement('strong');
-        strong.textContent = label + ': ';
+        strong.textContent = label + ':';
         p.appendChild(strong);
-        p.appendChild(document.createTextNode(value));
+        p.appendChild(document.createTextNode(' ' + value));
         container.appendChild(p);
       });
     });

@@ -17,8 +17,8 @@
     <div class="stat-label">Pending</div>
   </div>
   <div class="stat">
-    <div class="stat-value" id="stat-ruby">-</div>
-    <div class="stat-label">Ruby Version</div>
+    <div class="stat-value" id="stat-pending-pct">-</div>
+    <div class="stat-label">% Complete</div>
   </div>
 </div>
 
@@ -74,7 +74,8 @@
       document.getElementById('stat-total').textContent = data.total;
       document.getElementById('stat-done').textContent = data.done;
       document.getElementById('stat-pending').textContent = data.pending;
-      document.getElementById('stat-ruby').textContent = data.ruby_version;
+      const pct = data.total > 0 ? Math.round((data.done / data.total) * 100) : 0;
+      document.getElementById('stat-pending-pct').textContent = pct + '%';
     } catch(e) {}
   }
 
