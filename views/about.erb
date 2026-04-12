@@ -49,9 +49,9 @@
       const container = document.getElementById('server-info');
       container.innerHTML = '';
       [
-        ['Server Time', data.server_time],
         ['Todos Created', data.total],
         ['Todos Completed', data.done],
+        ['Todos Pending', data.pending],
       ].forEach(([label, value]) => {
         const p = document.createElement('p');
         const strong = document.createElement('strong');

@@ -65,7 +65,6 @@ get '/api/stats' do
   json(
     total: $todos.size,
     done: $todos.count { |t| t[:done] },
-    pending: $todos.count { |t| !t[:done] },
-    server_time: Time.now.to_s
+    pending: $todos.count { |t| !t[:done] }
   )
 end
