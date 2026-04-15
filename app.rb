@@ -8,6 +8,9 @@ set :bind, '0.0.0.0'
 # In-memory todo store
 $todos = []
 $next_id = 1
+$todos_mutex = Mutex.new
+
+MAX_TODO_LENGTH = 500
 
 # Pages
 get '/' do
@@ -38,11 +41,14 @@ post '/api/todos' do
   halt 400, json(error: 'text is required') unless text.is_a?(String)
   text = text.strip
   halt 400, json(error: 'text cannot be empty') if text.empty?
-  halt 400, json(error: 'text is too long (max 500 characters)') if text.length > 500
+  halt 400, json(error: 'text is too long (max 500 characters)') if text.length > MAX_TODO_LENGTH
 
-  todo = { id: $next_id, text: text, done: false, created_at: Time.now.to_s }
-  $next_id += 1
-  $todos << todo
+  todo = nil
+  $todos_mutex.synchronize do
+    todo = { id: $next_id, text: text, done: false, created_at: Time.now.to_s }
+    $next_id += 1
+    $todos << todo
+  end
   json todo
 end
 
