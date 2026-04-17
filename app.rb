@@ -27,7 +27,7 @@ end
 
 # API endpoints
 get '/api/todos' do
-  json $todos
+  $todos_mutex.synchronize { json $todos.dup }
 end
 
 post '/api/todos' do
@@ -53,24 +53,33 @@ post '/api/todos' do
 end
 
 patch '/api/todos/:id' do
-  todo = $todos.find { |t| t[:id] == params[:id].to_i }
+  todo = nil
+  $todos_mutex.synchronize do
+    todo = $todos.find { |t| t[:id] == params[:id].to_i }
+    todo[:done] = !todo[:done] if todo
+  end
   halt 404, json(error: 'Not found') unless todo
-  todo[:done] = !todo[:done]
   json todo
 end
 
 delete '/api/todos/:id' do
   id = params[:id].to_i
-  original_size = $todos.size
-  $todos.reject! { |t| t[:id] == id }
-  halt 404, json(error: 'Not found') if $todos.size == original_size
+  found = false
+  $todos_mutex.synchronize do
+    original_size = $todos.size
+    $todos.reject! { |t| t[:id] == id }
+    found = $todos.size < original_size
+  end
+  halt 404, json(error: 'Not found') unless found
   json success: true
 end
 
 get '/api/stats' do
-  json(
-    total: $todos.size,
-    done: $todos.count { |t| t[:done] },
-    pending: $todos.count { |t| !t[:done] }
-  )
+  $todos_mutex.synchronize do
+    json(
+      total: $todos.size,
+      done: $todos.count { |t| t[:done] },
+      pending: $todos.count { |t| !t[:done] }
+    )
+  end
 end
