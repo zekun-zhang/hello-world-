@@ -1,6 +1,7 @@
 require 'sinatra'
 require 'sinatra/json'
 require 'json'
+require 'thread'
 
 set :port, 8080
 set :bind, '0.0.0.0'
@@ -54,10 +55,10 @@ post '/api/todos' do
 end
 
 patch '/api/todos/:id' do
-  todo = nil
-  $todos_mutex.synchronize do
-    todo = $todos.find { |t| t[:id] == params[:id].to_i }
-    todo[:done] = !todo[:done] if todo
+  todo = $todos_mutex.synchronize do
+    t = $todos.find { |t| t[:id] == params[:id].to_i }
+    t[:done] = !t[:done] if t
+    t
   end
   halt 404, json(error: 'Not found') unless todo
   json todo
@@ -80,7 +81,8 @@ get '/api/stats' do
     json(
       total: $todos.size,
       done: $todos.count { |t| t[:done] },
-      pending: $todos.count { |t| !t[:done] }
+      pending: $todos.count { |t| !t[:done] },
+      server_time: Time.now.to_s
     )
   end
 end
