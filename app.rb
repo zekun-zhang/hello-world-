@@ -28,17 +28,17 @@ get '/api/todos' do
 end
 
 post '/api/todos' do
-  data = begin
-    JSON.parse(request.body.read)
+  begin
+    data = JSON.parse(request.body.read)
   rescue JSON::ParserError
     halt 400, json(error: 'Invalid JSON')
   end
 
-  text = data['text'].to_s.strip
-  halt 400, json(error: 'Text is required') if text.empty?
-  halt 400, json(error: 'Text too long') if text.length > 500
+  text = data['text']
+  halt 400, json(error: 'text must be a non-empty string') unless text.is_a?(String) && !text.strip.empty?
+  halt 400, json(error: 'text exceeds maximum length of 500 characters') if text.length > 500
 
-  todo = { id: $next_id, text: text, done: false, created_at: Time.now.to_s }
+  todo = { id: $next_id, text: text.strip, done: false, created_at: Time.now.to_s }
   $next_id += 1
   $todos << todo
   json todo
