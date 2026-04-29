@@ -8,6 +8,9 @@ set :bind, '0.0.0.0'
 # In-memory todo store
 $todos = []
 $next_id = 1
+$mutex = Mutex.new
+
+MAX_TODO_LENGTH = 500
 
 # Pages
 get '/' do
@@ -28,8 +31,8 @@ get '/api/todos' do
 end
 
 post '/api/todos' do
-  begin
-    data = JSON.parse(request.body.read)
+  data = begin
+    JSON.parse(request.body.read)
   rescue JSON::ParserError
     halt 400, json(error: 'Invalid JSON')
   end
@@ -38,33 +41,46 @@ post '/api/todos' do
   halt 400, json(error: 'text must be a string') unless text.is_a?(String)
   text = text.strip
   halt 400, json(error: 'text cannot be blank') if text.empty?
-  halt 400, json(error: 'text is too long (max 500 characters)') if text.length > 500
+  halt 400, json(error: "text is too long (max #{MAX_TODO_LENGTH} characters)") if text.length > MAX_TODO_LENGTH
 
-  todo = { id: $next_id, text: text, done: false, created_at: Time.now.to_s }
-  $next_id += 1
-  $todos << todo
+  todo = nil
+  $mutex.synchronize do
+    todo = { id: $next_id, text: text, done: false, created_at: Time.now.to_s }
+    $next_id += 1
+    $todos << todo
+  end
   status 201
   json todo
 end
 
 patch '/api/todos/:id' do
-  todo = $todos.find { |t| t[:id] == params[:id].to_i }
+  todo = nil
+  $mutex.synchronize do
+    todo = $todos.find { |t| t[:id] == params[:id].to_i }
+    todo[:done] = !todo[:done] if todo
+  end
   halt 404, json(error: 'Not found') unless todo
-  todo[:done] = !todo[:done]
   json todo
 end
 
 delete '/api/todos/:id' do
-  removed = $todos.reject! { |t| t[:id] == params[:id].to_i }
-  halt 404, json(error: 'Not found') if removed.nil?
+  deleted = false
+  $mutex.synchronize do
+    before = $todos.size
+    $todos.reject! { |t| t[:id] == params[:id].to_i }
+    deleted = $todos.size < before
+  end
+  halt 404, json(error: 'Not found') unless deleted
   json success: true
 end
 
 get '/api/stats' do
-  json(
-    total: $todos.size,
-    done: $todos.count { |t| t[:done] },
-    pending: $todos.count { |t| !t[:done] },
-    server_time: Time.now.to_s
-  )
+  $mutex.synchronize do
+    json(
+      total: $todos.size,
+      done: $todos.count { |t| t[:done] },
+      pending: $todos.count { |t| !t[:done] },
+      server_time: Time.now.to_s
+    )
+  end
 end

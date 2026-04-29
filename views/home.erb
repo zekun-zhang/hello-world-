@@ -16,10 +16,6 @@
     <div class="stat-value" id="stat-pending">0</div>
     <div class="stat-label">Pending</div>
   </div>
-  <div class="stat">
-    <div class="stat-value" id="stat-pending-pct">-</div>
-    <div class="stat-label">% Complete</div>
-  </div>
 </div>
 
 <div class="grid-2">
@@ -74,9 +70,7 @@
       document.getElementById('stat-total').textContent = data.total;
       document.getElementById('stat-done').textContent = data.done;
       document.getElementById('stat-pending').textContent = data.pending;
-      const pct = data.total > 0 ? Math.round((data.done / data.total) * 100) : 0;
-      document.getElementById('stat-pending-pct').textContent = pct + '%';
-    } catch(e) {}
+    } catch(e) { console.error('Failed to load stats:', e); }
   }
 
   // Todos
@@ -86,7 +80,7 @@
       const todos = await res.json();
       renderTodos(todos);
       loadStats();
-    } catch(e) {}
+    } catch(e) { console.error('Failed to load todos:', e); }
   }
 
   function renderTodos(todos) {
@@ -117,13 +111,20 @@
     const input = document.getElementById('todo-input');
     const text = input.value.trim();
     if (!text) return;
-    await fetch('/api/todos', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text })
-    });
-    input.value = '';
-    loadTodos();
+    try {
+      const res = await fetch('/api/todos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text })
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        console.error('Failed to add todo:', err.error || res.status);
+        return;
+      }
+      input.value = '';
+      loadTodos();
+    } catch(e) { console.error('Failed to add todo:', e); }
   }
 
   async function toggleTodo(id) {

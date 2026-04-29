@@ -51,7 +51,7 @@
       [
         ['Server Time', data.server_time],
         ['Todos Created', data.total],
-        ['Todos Completed', data.done]
+        ['Todos Completed', data.done],
       ].forEach(([label, value]) => {
         const p = document.createElement('p');
         const strong = document.createElement('strong');
@@ -60,5 +60,6 @@
         p.appendChild(document.createTextNode(' ' + value));
         container.appendChild(p);
       });
-    });
+    })
+    .catch(e => console.error('Failed to load server info:', e));
 </script>
