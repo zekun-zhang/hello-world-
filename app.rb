@@ -12,6 +12,7 @@ $next_id = 1
 $todos_mutex = Mutex.new
 
 MAX_TODO_LENGTH = 500
+MAX_TODOS = 1000
 
 # Pages
 get '/' do
@@ -45,6 +46,7 @@ post '/api/todos' do
   halt 400, json(error: 'text is too long (max 500 characters)') if text.length > MAX_TODO_LENGTH
 
   todo = $todos_mutex.synchronize do
+    halt 429, json(error: 'Todo limit reached') if $todos.size >= MAX_TODOS
     t = { id: $next_id, text: text, done: false, created_at: Time.now.to_s }
     $next_id += 1
     $todos << t
