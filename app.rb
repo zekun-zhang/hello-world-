@@ -33,12 +33,18 @@ post '/api/todos' do
   rescue JSON::ParserError
     halt 400, json(error: 'Invalid JSON')
   end
-  text = data['text'].to_s.strip
-  halt 400, json(error: 'Text is required') if text.empty?
-  halt 400, json(error: 'Text must be 500 characters or fewer') if text.length > 500
+
+  text = data['text']
+  halt 400, json(error: 'text is required') unless text.is_a?(String)
+  text = text.strip
+  halt 400, json(error: 'text cannot be empty') if text.empty?
+  halt 400, json(error: 'text is too long (max 500 characters)') if text.length > 500
+
+
   todo = { id: $next_id, text: text, done: false, created_at: Time.now.to_s }
   $next_id += 1
   $todos << todo
+  status 201
   json todo
 end
 
@@ -50,7 +56,9 @@ patch '/api/todos/:id' do
 end
 
 delete '/api/todos/:id' do
+  original_size = $todos.size
   $todos.reject! { |t| t[:id] == params[:id].to_i }
+  halt 404, json(error: 'Not found') if $todos.size == original_size
   json success: true
 end
 
