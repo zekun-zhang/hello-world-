@@ -36,7 +36,9 @@ post '/api/todos' do
     halt 400, json(error: 'Invalid JSON')
   end
 
-  text = data['text'].to_s.strip
+  text = data['text']
+  halt 400, json(error: 'text must be a string') unless text.is_a?(String)
+  text = text.strip
   halt 400, json(error: 'Text is required') if text.empty?
   halt 400, json(error: "Text must be #{MAX_TODO_LENGTH} characters or fewer") if text.length > MAX_TODO_LENGTH
 
