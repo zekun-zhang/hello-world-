@@ -28,10 +28,23 @@ get '/api/todos' do
 end
 
 post '/api/todos' do
-  data = JSON.parse(request.body.read)
-  todo = { id: $next_id, text: data['text'], done: false, created_at: Time.now.to_s }
+  begin
+    data = JSON.parse(request.body.read)
+  rescue JSON::ParserError
+    halt 400, json(error: 'Invalid JSON')
+  end
+
+  unless data.is_a?(Hash) && data['text'].is_a?(String) && !data['text'].strip.empty?
+    halt 400, json(error: 'text must be a non-empty string')
+  end
+
+  text = data['text'].strip
+  halt 400, json(error: 'text exceeds 500 character limit') if text.length > 500
+
+  todo = { id: $next_id, text: text, done: false, created_at: Time.now.to_s }
   $next_id += 1
   $todos << todo
+  status 201
   json todo
 end
 
@@ -52,7 +65,6 @@ get '/api/stats' do
     total: $todos.size,
     done: $todos.count { |t| t[:done] },
     pending: $todos.count { |t| !t[:done] },
-    server_time: Time.now.to_s,
-    ruby_version: RUBY_VERSION
+    server_time: Time.now.to_s
   )
 end

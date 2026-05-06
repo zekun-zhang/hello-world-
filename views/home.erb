@@ -74,8 +74,8 @@
       document.getElementById('stat-total').textContent = data.total;
       document.getElementById('stat-done').textContent = data.done;
       document.getElementById('stat-pending').textContent = data.pending;
-      document.getElementById('stat-ruby').textContent = data.ruby_version;
-    } catch(e) {}
+      document.getElementById('stat-ruby').textContent = '-';
+    } catch(e) { console.error('Failed to load stats:', e); }
   }
 
   // Todos
@@ -85,7 +85,7 @@
       const todos = await res.json();
       renderTodos(todos);
       loadStats();
-    } catch(e) {}
+    } catch(e) { console.error('Failed to load todos:', e); }
   }
 
   function renderTodos(todos) {
