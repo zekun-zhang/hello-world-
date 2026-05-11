@@ -46,11 +46,20 @@
   fetch('/api/stats')
     .then(r => r.json())
     .then(data => {
-      document.getElementById('server-info').innerHTML = `
-        <p><strong>Ruby:</strong> ${data.ruby_version}</p>
-        <p><strong>Server Time:</strong> ${data.server_time}</p>
-        <p><strong>Todos Created:</strong> ${data.total}</p>
-        <p><strong>Todos Completed:</strong> ${data.done}</p>
-      `;
+      const container = document.getElementById('server-info');
+      container.innerHTML = '';
+      [
+        ['Ruby', data.ruby_version],
+        ['Server Time', data.server_time],
+        ['Todos Created', data.total],
+        ['Todos Completed', data.done]
+      ].forEach(([label, value]) => {
+        const p = document.createElement('p');
+        const strong = document.createElement('strong');
+        strong.textContent = label + ':';
+        p.appendChild(strong);
+        p.appendChild(document.createTextNode(' ' + value));
+        container.appendChild(p);
+      });
     });
 </script>
