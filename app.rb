@@ -36,11 +36,14 @@ post '/api/todos' do
     halt 400, json(error: 'Invalid JSON')
   end
 
+  halt 400, json(error: 'Request body must be a JSON object') unless data.is_a?(Hash)
+
   text = data['text']
+  halt 400, json(error: 'text is required') if text.nil?
   halt 400, json(error: 'text must be a string') unless text.is_a?(String)
   text = text.strip
-  halt 400, json(error: 'Text is required') if text.empty?
-  halt 400, json(error: "Text must be #{MAX_TODO_LENGTH} characters or fewer") if text.length > MAX_TODO_LENGTH
+  halt 400, json(error: 'text cannot be blank') if text.empty?
+  halt 400, json(error: "text must be #{MAX_TODO_LENGTH} characters or fewer") if text.length > MAX_TODO_LENGTH
 
   todo = { id: $next_id, text: text, done: false, created_at: Time.now.to_s }
   $next_id += 1
@@ -68,7 +71,6 @@ get '/api/stats' do
     total: $todos.size,
     done: $todos.count { |t| t[:done] },
     pending: $todos.count { |t| !t[:done] },
-    server_time: Time.now.to_s,
-    ruby_version: RUBY_VERSION
+    server_time: Time.now.to_s
   )
 end

@@ -48,15 +48,11 @@
     .then(data => {
       const container = document.getElementById('server-info');
       container.innerHTML = '';
-
-      const rows = [
-        ['Ruby', data.ruby_version],
+      [
         ['Server Time', data.server_time],
         ['Todos Created', data.total],
         ['Todos Completed', data.done]
-      ];
-
-      rows.forEach(([label, value]) => {
+      ].forEach(([label, value]) => {
         const p = document.createElement('p');
         const strong = document.createElement('strong');
         strong.textContent = label + ':';
