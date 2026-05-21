@@ -48,7 +48,6 @@
     .then(data => {
       const container = document.getElementById('server-info');
       container.innerHTML = '';
-
       [
         ['Server Time', data.server_time],
         ['Todos Created', data.total],
