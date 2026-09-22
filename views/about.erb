@@ -43,14 +43,23 @@
 </div>
 
 <script>
+  function makeInfoRow(label, value) {
+    const p = document.createElement('p');
+    const strong = document.createElement('strong');
+    strong.textContent = label + ':';
+    p.appendChild(strong);
+    p.appendChild(document.createTextNode(' ' + value));
+    return p;
+  }
+
   fetch('/api/stats')
     .then(r => r.json())
     .then(data => {
-      document.getElementById('server-info').innerHTML = `
-        <p><strong>Ruby:</strong> ${data.ruby_version}</p>
-        <p><strong>Server Time:</strong> ${data.server_time}</p>
-        <p><strong>Todos Created:</strong> ${data.total}</p>
-        <p><strong>Todos Completed:</strong> ${data.done}</p>
-      `;
+      const info = document.getElementById('server-info');
+      info.textContent = '';
+      info.appendChild(makeInfoRow('Ruby', data.ruby_version));
+      info.appendChild(makeInfoRow('Server Time', data.server_time));
+      info.appendChild(makeInfoRow('Todos Created', data.total));
+      info.appendChild(makeInfoRow('Todos Completed', data.done));
     });
 </script>
