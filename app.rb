@@ -62,9 +62,13 @@ patch '/api/todos/:id' do
 end
 
 delete '/api/todos/:id' do
-  $todos_lock.synchronize do
-    $todos.reject! { |t| t[:id] == params[:id].to_i }
+  id = params[:id].to_i
+  found = $todos_lock.synchronize do
+    before = $todos.size
+    $todos.reject! { |t| t[:id] == id }
+    $todos.size < before
   end
+  halt 404, json(error: 'Not found') unless found
   json success: true
 end
 
