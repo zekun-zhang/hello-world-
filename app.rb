@@ -8,7 +8,7 @@ set :bind, '0.0.0.0'
 # In-memory todo store
 $todos = []
 $next_id = 1
-$mutex = Mutex.new
+$todos_lock = Mutex.new
 
 MAX_TODO_LENGTH = 500
 
@@ -27,12 +27,13 @@ end
 
 # API endpoints
 get '/api/todos' do
-  json $todos
+  todos_copy = $todos_lock.synchronize { $todos.dup }
+  json todos_copy
 end
 
 post '/api/todos' do
-  begin
-    data = JSON.parse(request.body.read)
+  data = begin
+    JSON.parse(request.body.read)
   rescue JSON::ParserError
     halt 400, json(error: 'Invalid JSON')
   end
@@ -43,41 +44,43 @@ post '/api/todos' do
   halt 400, json(error: 'text cannot be blank') if text.empty?
   halt 400, json(error: "text too long (max #{MAX_TODO_LENGTH} chars)") if text.length > MAX_TODO_LENGTH
 
-  todo = $mutex.synchronize do
-    t = { id: $next_id, text: text, done: false, created_at: Time.now.to_s }
+  todo = nil
+  $todos_lock.synchronize do
+    todo = { id: $next_id, text: text, done: false, created_at: Time.now.to_s }
     $next_id += 1
-    $todos << t
-    t
+    $todos << todo
   end
   status 201
   json todo
 end
 
 patch '/api/todos/:id' do
-  id = params[:id].to_i
-  todo = $mutex.synchronize { $todos.find { |t| t[:id] == id } }
+  todo = nil
+  $todos_lock.synchronize do
+    todo = $todos.find { |t| t[:id] == params[:id].to_i }
+    todo[:done] = !todo[:done] if todo
+  end
   halt 404, json(error: 'Not found') unless todo
-  $mutex.synchronize { todo[:done] = !todo[:done] }
   json todo
 end
 
 delete '/api/todos/:id' do
   id = params[:id].to_i
-  removed = $mutex.synchronize do
+  found = $todos_lock.synchronize do
     before = $todos.size
     $todos.reject! { |t| t[:id] == id }
     $todos.size < before
   end
-  halt 404, json(error: 'Not found') unless removed
+  halt 404, json(error: 'Not found') unless found
   json success: true
 end
 
 get '/api/stats' do
+  total, done = $todos_lock.synchronize { [$todos.size, $todos.count { |t| t[:done] }] }
   json(
-    total: $todos.size,
-    done: $todos.count { |t| t[:done] },
-    pending: $todos.count { |t| !t[:done] },
-    server_time: Time.now.to_s,
-    ruby_version: RUBY_VERSION
+    total: total,
+    done: done,
+    pending: total - done,
+    server_time: Time.now.to_s
   )
 end

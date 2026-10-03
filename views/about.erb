@@ -49,10 +49,9 @@
       const info = document.getElementById('server-info');
       info.innerHTML = '';
       [
-        ['Ruby', data.ruby_version],
         ['Server Time', data.server_time],
         ['Todos Created', data.total],
-        ['Todos Completed', data.done]
+        ['Todos Completed', data.done],
       ].forEach(([label, value]) => {
         const p = document.createElement('p');
         const strong = document.createElement('strong');
