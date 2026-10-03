@@ -8,6 +8,9 @@ set :bind, '0.0.0.0'
 # In-memory todo store
 $todos = []
 $next_id = 1
+$mutex = Mutex.new
+
+MAX_TODO_LENGTH = 500
 
 # Pages
 get '/' do
@@ -28,22 +31,44 @@ get '/api/todos' do
 end
 
 post '/api/todos' do
-  data = JSON.parse(request.body.read)
-  todo = { id: $next_id, text: data['text'], done: false, created_at: Time.now.to_s }
-  $next_id += 1
-  $todos << todo
+  begin
+    data = JSON.parse(request.body.read)
+  rescue JSON::ParserError
+    halt 400, json(error: 'Invalid JSON')
+  end
+
+  text = data['text']
+  halt 400, json(error: 'text must be a string') unless text.is_a?(String)
+  text = text.strip
+  halt 400, json(error: 'text cannot be blank') if text.empty?
+  halt 400, json(error: "text too long (max #{MAX_TODO_LENGTH} chars)") if text.length > MAX_TODO_LENGTH
+
+  todo = $mutex.synchronize do
+    t = { id: $next_id, text: text, done: false, created_at: Time.now.to_s }
+    $next_id += 1
+    $todos << t
+    t
+  end
+  status 201
   json todo
 end
 
 patch '/api/todos/:id' do
-  todo = $todos.find { |t| t[:id] == params[:id].to_i }
+  id = params[:id].to_i
+  todo = $mutex.synchronize { $todos.find { |t| t[:id] == id } }
   halt 404, json(error: 'Not found') unless todo
-  todo[:done] = !todo[:done]
+  $mutex.synchronize { todo[:done] = !todo[:done] }
   json todo
 end
 
 delete '/api/todos/:id' do
-  $todos.reject! { |t| t[:id] == params[:id].to_i }
+  id = params[:id].to_i
+  removed = $mutex.synchronize do
+    before = $todos.size
+    $todos.reject! { |t| t[:id] == id }
+    $todos.size < before
+  end
+  halt 404, json(error: 'Not found') unless removed
   json success: true
 end
 
