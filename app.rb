@@ -11,6 +11,7 @@ $todos = []
 $next_id = 1
 
 MAX_TODO_LENGTH = 500
+MAX_TODOS = 1000
 
 # Pages
 get '/' do
@@ -47,6 +48,7 @@ post '/api/todos' do
 
   todo = nil
   TODOS_MUTEX.synchronize do
+    halt 429, json(error: 'Todo limit reached') if $todos.size >= MAX_TODOS
     todo = { id: $next_id, text: text.strip, done: false, created_at: Time.now.to_s }
     $next_id += 1
     $todos << todo
