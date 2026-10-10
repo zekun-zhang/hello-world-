@@ -5,9 +5,12 @@ require 'json'
 set :port, 8080
 set :bind, '0.0.0.0'
 
-# In-memory todo store
+# Thread-safe in-memory todo store
+TODOS_MUTEX = Mutex.new
 $todos = []
 $next_id = 1
+
+MAX_TODO_LENGTH = 500
 
 # Pages
 get '/' do
@@ -24,35 +27,61 @@ end
 
 # API endpoints
 get '/api/todos' do
-  json $todos
+  TODOS_MUTEX.synchronize { json $todos.dup }
 end
 
 post '/api/todos' do
-  data = JSON.parse(request.body.read)
-  todo = { id: $next_id, text: data['text'], done: false, created_at: Time.now.to_s }
-  $next_id += 1
-  $todos << todo
+  begin
+    data = JSON.parse(request.body.read)
+  rescue JSON::ParserError
+    halt 400, json(error: 'Invalid JSON')
+  end
+
+  text = data['text']
+  unless text.is_a?(String) && !text.strip.empty?
+    halt 400, json(error: 'text must be a non-empty string')
+  end
+  if text.length > MAX_TODO_LENGTH
+    halt 400, json(error: "text must be #{MAX_TODO_LENGTH} characters or fewer")
+  end
+
+  todo = nil
+  TODOS_MUTEX.synchronize do
+    todo = { id: $next_id, text: text.strip, done: false, created_at: Time.now.to_s }
+    $next_id += 1
+    $todos << todo
+  end
   json todo
 end
 
 patch '/api/todos/:id' do
-  todo = $todos.find { |t| t[:id] == params[:id].to_i }
+  todo = nil
+  TODOS_MUTEX.synchronize do
+    todo = $todos.find { |t| t[:id] == params[:id].to_i }
+    todo[:done] = !todo[:done] if todo
+  end
   halt 404, json(error: 'Not found') unless todo
-  todo[:done] = !todo[:done]
   json todo
 end
 
 delete '/api/todos/:id' do
-  $todos.reject! { |t| t[:id] == params[:id].to_i }
+  deleted = false
+  TODOS_MUTEX.synchronize do
+    before = $todos.size
+    $todos.reject! { |t| t[:id] == params[:id].to_i }
+    deleted = $todos.size < before
+  end
+  halt 404, json(error: 'Not found') unless deleted
   json success: true
 end
 
 get '/api/stats' do
-  json(
-    total: $todos.size,
-    done: $todos.count { |t| t[:done] },
-    pending: $todos.count { |t| !t[:done] },
-    server_time: Time.now.to_s,
-    ruby_version: RUBY_VERSION
-  )
+  TODOS_MUTEX.synchronize do
+    json(
+      total: $todos.size,
+      done: $todos.count { |t| t[:done] },
+      pending: $todos.count { |t| !t[:done] },
+      server_time: Time.now.to_s
+    )
+  end
 end
