@@ -29,10 +29,15 @@ end
 
 post '/api/todos' do
   data = JSON.parse(request.body.read)
-  todo = { id: $next_id, text: data['text'], done: false, created_at: Time.now.to_s }
+  text = data['text']
+  halt 400, json(error: 'text must be a non-empty string') unless text.is_a?(String) && !text.strip.empty?
+  halt 400, json(error: 'text too long') if text.length > 500
+  todo = { id: $next_id, text: text.strip, done: false, created_at: Time.now.to_s }
   $next_id += 1
   $todos << todo
   json todo
+rescue JSON::ParserError
+  halt 400, json(error: 'invalid JSON')
 end
 
 patch '/api/todos/:id' do
@@ -43,7 +48,9 @@ patch '/api/todos/:id' do
 end
 
 delete '/api/todos/:id' do
+  before_count = $todos.size
   $todos.reject! { |t| t[:id] == params[:id].to_i }
+  halt 404, json(error: 'Not found') if $todos.size == before_count
   json success: true
 end
 
