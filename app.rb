@@ -27,7 +27,8 @@ end
 
 # API endpoints
 get '/api/todos' do
-  json $todos_mutex.synchronize { $todos.dup }
+  snapshot = $todos_mutex.synchronize { $todos.map(&:dup) }
+  json snapshot
 end
 
 post '/api/todos' do
