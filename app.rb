@@ -32,12 +32,14 @@ get '/api/todos' do
 end
 
 post '/api/todos' do
-  raw = request.body.read(MAX_BODY_SIZE)
+  raw = request.body.read(MAX_BODY_SIZE + 1)
+  halt 413, json(error: "Request body exceeds #{MAX_BODY_SIZE} byte limit") if raw.bytesize > MAX_BODY_SIZE
   begin
     data = JSON.parse(raw)
   rescue JSON::ParserError
     halt 400, json(error: 'Invalid JSON')
   end
+  halt 400, json(error: 'Request body must be a JSON object') unless data.is_a?(Hash)
 
   text = data['text']
   halt 400, json(error: 'text must be a non-empty string') unless text.is_a?(String) && !text.strip.empty?
@@ -56,8 +58,11 @@ end
 patch '/api/todos/:id' do
   todo = nil
   $mutex.synchronize do
-    todo = $todos.find { |t| t[:id] == params[:id].to_i }
-    todo[:done] = !todo[:done] if todo
+    found = $todos.find { |t| t[:id] == params[:id].to_i }
+    if found
+      found[:done] = !found[:done]
+      todo = found.dup
+    end
   end
   halt 404, json(error: 'Not found') unless todo
   json todo
