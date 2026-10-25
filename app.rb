@@ -8,6 +8,7 @@ set :bind, '0.0.0.0'
 # In-memory todo store
 $todos = []
 $next_id = 1
+$todos_mutex = Mutex.new
 
 MAX_TODO_LENGTH = 500
 
@@ -45,24 +46,31 @@ post '/api/todos' do
   halt 400, json(error: 'text cannot be blank') if text.empty?
   halt 400, json(error: "text must be #{MAX_TODO_LENGTH} characters or fewer") if text.length > MAX_TODO_LENGTH
 
-  todo = { id: $next_id, text: text, done: false, created_at: Time.now.to_s }
-  $next_id += 1
-  $todos << todo
+  todo = nil
+  $todos_mutex.synchronize do
+    todo = { id: $next_id, text: text, done: false, created_at: Time.now.to_s }
+    $next_id += 1
+    $todos << todo
+  end
   json todo
 end
 
 patch '/api/todos/:id' do
-  todo = $todos.find { |t| t[:id] == params[:id].to_i }
+  todo = $todos_mutex.synchronize { $todos.find { |t| t[:id] == params[:id].to_i } }
   halt 404, json(error: 'Not found') unless todo
-  todo[:done] = !todo[:done]
+  $todos_mutex.synchronize { todo[:done] = !todo[:done] }
   json todo
 end
 
 delete '/api/todos/:id' do
   id = params[:id].to_i
-  original_size = $todos.size
-  $todos.reject! { |t| t[:id] == id }
-  halt 404, json(error: 'Not found') if $todos.size == original_size
+  deleted = false
+  $todos_mutex.synchronize do
+    original_size = $todos.size
+    $todos.reject! { |t| t[:id] == id }
+    deleted = $todos.size < original_size
+  end
+  halt 404, json(error: 'Not found') unless deleted
   json success: true
 end
 
