@@ -46,8 +46,8 @@
   fetch('/api/stats')
     .then(r => r.json())
     .then(data => {
-      const el = document.getElementById('server-info');
-      el.innerHTML = '';
+      const container = document.getElementById('server-info');
+      container.innerHTML = '';
       [
         ['Ruby', data.ruby_version],
         ['Server Time', data.server_time],
@@ -56,10 +56,13 @@
       ].forEach(([label, value]) => {
         const p = document.createElement('p');
         const strong = document.createElement('strong');
-        strong.textContent = label + ':';
+        strong.textContent = label + ': ';
         p.appendChild(strong);
-        p.appendChild(document.createTextNode(' ' + value));
-        el.appendChild(p);
+        p.appendChild(document.createTextNode(value));
+        container.appendChild(p);
       });
+    })
+    .catch(() => {
+      document.getElementById('server-info').textContent = 'Unavailable';
     });
 </script>

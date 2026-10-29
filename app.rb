@@ -5,10 +5,13 @@ require 'json'
 set :port, 8080
 set :bind, '0.0.0.0'
 
-# In-memory todo store
+# Thread-safe in-memory todo store
+TODOS_MUTEX = Mutex.new
 $todos = []
 $next_id = 1
-$mutex = Mutex.new
+
+MAX_TODO_LENGTH = 500
+MAX_TODOS = 1000
 
 # Pages
 get '/' do
@@ -25,10 +28,12 @@ end
 
 # API endpoints
 get '/api/todos' do
-  json $mutex.synchronize { $todos.dup }
+  TODOS_MUTEX.synchronize { json $todos.dup }
 end
 
 post '/api/todos' do
+  halt 415, json(error: 'Content-Type must be application/json') unless request.content_type&.include?('application/json')
+
   begin
     data = JSON.parse(request.body.read)
   rescue JSON::ParserError
@@ -37,48 +42,52 @@ post '/api/todos' do
 
   text = data['text']
   unless text.is_a?(String) && !text.strip.empty?
-    halt 400, json(error: 'text is required and must be a non-empty string')
+    halt 400, json(error: 'text must be a non-empty string')
   end
-  text = text.strip.slice(0, 1000)
+  if text.length > MAX_TODO_LENGTH
+    halt 400, json(error: "text must be #{MAX_TODO_LENGTH} characters or fewer")
+  end
 
-  todo = $mutex.synchronize do
-    t = { id: $next_id, text: text, done: false, created_at: Time.now.to_s }
+  todo = nil
+  TODOS_MUTEX.synchronize do
+    halt 429, json(error: 'Todo limit reached') if $todos.size >= MAX_TODOS
+    todo = { id: $next_id, text: text.strip, done: false, created_at: Time.now.to_s }
     $next_id += 1
-    $todos << t
-    t
+    $todos << todo
   end
   status 201
   json todo
 end
 
 patch '/api/todos/:id' do
-  id = params[:id].to_i
-  todo = $mutex.synchronize { $todos.find { |t| t[:id] == id } }
+  todo = nil
+  TODOS_MUTEX.synchronize do
+    todo = $todos.find { |t| t[:id] == params[:id].to_i }
+    todo[:done] = !todo[:done] if todo
+  end
   halt 404, json(error: 'Not found') unless todo
-  $mutex.synchronize { todo[:done] = !todo[:done] }
   json todo
 end
 
 delete '/api/todos/:id' do
-  id = params[:id].to_i
-  found = $mutex.synchronize do
+  deleted = false
+  TODOS_MUTEX.synchronize do
     before = $todos.size
-    $todos.reject! { |t| t[:id] == id }
-    $todos.size < before
+    $todos.reject! { |t| t[:id] == params[:id].to_i }
+    deleted = $todos.size < before
   end
-  halt 404, json(error: 'Not found') unless found
+  halt 404, json(error: 'Not found') unless deleted
   json success: true
 end
 
 get '/api/stats' do
-  total, done_count = $mutex.synchronize do
-    [$todos.size, $todos.count { |t| t[:done] }]
+  TODOS_MUTEX.synchronize do
+    json(
+      total: $todos.size,
+      done: $todos.count { |t| t[:done] },
+      pending: $todos.count { |t| !t[:done] },
+      server_time: Time.now.to_s,
+      ruby_version: RUBY_VERSION
+    )
   end
-  json(
-    total: total,
-    done: done_count,
-    pending: total - done_count,
-    server_time: Time.now.to_s,
-    ruby_version: RUBY_VERSION
-  )
 end
