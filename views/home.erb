@@ -26,7 +26,7 @@
   <div class="card">
     <h3>Todo List</h3>
     <div class="todo-input">
-      <input type="text" id="todo-input" placeholder="What needs to be done?" onkeydown="if(event.key==='Enter') addTodo()">
+      <input type="text" id="todo-input" placeholder="What needs to be done?" maxlength="500" onkeydown="if(event.key==='Enter') addTodo()">
       <button class="btn btn-primary" onclick="addTodo()">Add</button>
     </div>
     <ul class="todo-list" id="todo-list"></ul>
@@ -116,11 +116,16 @@
     const input = document.getElementById('todo-input');
     const text = input.value.trim();
     if (!text) return;
-    await fetch('/api/todos', {
+    const res = await fetch('/api/todos', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text })
     });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      alert(err.error || 'Could not add todo. Please try again.');
+      return;
+    }
     input.value = '';
     loadTodos();
   }
