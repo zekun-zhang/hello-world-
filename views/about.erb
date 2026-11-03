@@ -46,15 +46,20 @@
   fetch('/api/stats')
     .then(r => r.json())
     .then(data => {
-      const info = document.getElementById('server-info');
-      info.innerHTML = '';
-      [['Todos Created', data.total], ['Todos Completed', data.done]].forEach(function(pair) {
+      const el = document.getElementById('server-info');
+      el.innerHTML = '';
+      const rows = [
+        ['Server Time', data.server_time],
+        ['Todos Created', data.total],
+        ['Todos Completed', data.done]
+      ];
+      rows.forEach(([label, value]) => {
         const p = document.createElement('p');
         const strong = document.createElement('strong');
-        strong.textContent = pair[0] + ':';
+        strong.textContent = label + ': ';
         p.appendChild(strong);
-        p.appendChild(document.createTextNode(' ' + Number(pair[1])));
-        info.appendChild(p);
+        p.appendChild(document.createTextNode(value));
+        el.appendChild(p);
       });
     });
 </script>
