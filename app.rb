@@ -33,11 +33,9 @@ post '/api/todos' do
   rescue JSON::ParserError
     halt 400, json(error: 'Invalid JSON')
   end
-
   text = data['text'].to_s.strip
   halt 400, json(error: 'Text is required') if text.empty?
   halt 400, json(error: 'Text too long (max 500 characters)') if text.length > 500
-
   todo = { id: $next_id, text: text, done: false, created_at: Time.now.to_s }
   $next_id += 1
   $todos << todo
@@ -61,7 +59,6 @@ get '/api/stats' do
     total: $todos.size,
     done: $todos.count { |t| t[:done] },
     pending: $todos.count { |t| !t[:done] },
-    server_time: Time.now.to_s,
-    ruby_version: RUBY_VERSION
+    server_time: Time.now.to_s
   )
 end
