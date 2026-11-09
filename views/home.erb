@@ -16,17 +16,13 @@
     <div class="stat-value" id="stat-pending">0</div>
     <div class="stat-label">Pending</div>
   </div>
-  <div class="stat">
-    <div class="stat-value" id="stat-ruby">-</div>
-    <div class="stat-label">Ruby Version</div>
-  </div>
 </div>
 
 <div class="grid-2">
   <div class="card">
     <h3>Todo List</h3>
     <div class="todo-input">
-      <input type="text" id="todo-input" placeholder="What needs to be done?" onkeydown="if(event.key==='Enter') addTodo()">
+      <input type="text" id="todo-input" placeholder="What needs to be done?" maxlength="1000" onkeydown="if(event.key==='Enter') addTodo()">
       <button class="btn btn-primary" onclick="addTodo()">Add</button>
     </div>
     <ul class="todo-list" id="todo-list"></ul>
@@ -74,7 +70,6 @@
       document.getElementById('stat-total').textContent = data.total;
       document.getElementById('stat-done').textContent = data.done;
       document.getElementById('stat-pending').textContent = data.pending;
-      document.getElementById('stat-ruby').textContent = data.ruby_version;
     } catch(e) {}
   }
 
@@ -116,11 +111,16 @@
     const input = document.getElementById('todo-input');
     const text = input.value.trim();
     if (!text) return;
-    await fetch('/api/todos', {
+    const res = await fetch('/api/todos', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text })
     });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      alert(err.error || 'Failed to add todo');
+      return;
+    }
     input.value = '';
     loadTodos();
   }
