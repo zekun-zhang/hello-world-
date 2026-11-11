@@ -8,6 +8,7 @@ set :bind, '0.0.0.0'
 # In-memory todo store
 $todos = []
 $next_id = 1
+$mutex = Mutex.new
 
 # Pages
 get '/' do
@@ -36,21 +37,29 @@ post '/api/todos' do
   text = data['text'].to_s.strip
   halt 400, json(error: 'Text is required') if text.empty?
   halt 400, json(error: 'Text too long (max 500 characters)') if text.length > 500
-  todo = { id: $next_id, text: text, done: false, created_at: Time.now.to_s }
-  $next_id += 1
-  $todos << todo
+  todo = nil
+  $mutex.synchronize do
+    todo = { id: $next_id, text: text, done: false, created_at: Time.now.to_s }
+    $next_id += 1
+    $todos << todo
+  end
   json todo
 end
 
 patch '/api/todos/:id' do
-  todo = $todos.find { |t| t[:id] == params[:id].to_i }
+  id = params[:id].to_i
+  todo = nil
+  $mutex.synchronize do
+    todo = $todos.find { |t| t[:id] == id }
+    todo[:done] = !todo[:done] if todo
+  end
   halt 404, json(error: 'Not found') unless todo
-  todo[:done] = !todo[:done]
   json todo
 end
 
 delete '/api/todos/:id' do
-  $todos.reject! { |t| t[:id] == params[:id].to_i }
+  id = params[:id].to_i
+  $mutex.synchronize { $todos.reject! { |t| t[:id] == id } }
   json success: true
 end
 

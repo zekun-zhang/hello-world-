@@ -59,5 +59,8 @@
       setText(info, 'Server Time', data.server_time);
       setText(info, 'Todos Created', data.total);
       setText(info, 'Todos Completed', data.done);
+    })
+    .catch(() => {
+      document.getElementById('server-info').textContent = 'Failed to load server info.';
     });
 </script>
