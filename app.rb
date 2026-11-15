@@ -8,6 +8,9 @@ set :bind, '0.0.0.0'
 # In-memory todo store
 $todos = []
 $next_id = 1
+$todos_mutex = Mutex.new
+
+MAX_TEXT_LENGTH = 500
 
 # Pages
 get '/' do
@@ -28,10 +31,20 @@ get '/api/todos' do
 end
 
 post '/api/todos' do
-  data = JSON.parse(request.body.read)
-  todo = { id: $next_id, text: data['text'], done: false, created_at: Time.now.to_s }
-  $next_id += 1
-  $todos << todo
+  data = JSON.parse(request.body.read) rescue nil
+  halt 400, json(error: 'Invalid JSON') unless data.is_a?(Hash)
+
+  text = data['text'].to_s.strip
+  halt 400, json(error: 'text is required') if text.empty?
+  halt 422, json(error: "text exceeds #{MAX_TEXT_LENGTH} characters") if text.length > MAX_TEXT_LENGTH
+
+  todo = nil
+  $todos_mutex.synchronize do
+    todo = { id: $next_id, text: text, done: false, created_at: Time.now.to_s }
+    $next_id += 1
+    $todos << todo
+  end
+  status 201
   json todo
 end
 
