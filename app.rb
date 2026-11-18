@@ -8,6 +8,9 @@ set :bind, '0.0.0.0'
 # In-memory todo store
 $todos = []
 $next_id = 1
+$id_mutex = Mutex.new
+
+MAX_TODO_LENGTH = 500
 
 # Pages
 get '/' do
@@ -31,19 +34,22 @@ post '/api/todos' do
   begin
     data = JSON.parse(request.body.read)
   rescue JSON::ParserError
-    halt 400, json(error: 'Invalid JSON')
+    halt 400, { 'Content-Type' => 'application/json' }, json(error: 'Invalid JSON')
   end
 
   text = data['text']
-  halt 400, json(error: 'text is required') unless text.is_a?(String)
+  halt 422, { 'Content-Type' => 'application/json' }, json(error: 'text is required') unless text.is_a?(String)
   text = text.strip
-  halt 400, json(error: 'text cannot be empty') if text.empty?
-  halt 400, json(error: 'text is too long (max 500 characters)') if text.length > 500
+  halt 422, { 'Content-Type' => 'application/json' }, json(error: 'text cannot be empty') if text.empty?
+  halt 422, { 'Content-Type' => 'application/json' }, json(error: "text is too long (max #{MAX_TODO_LENGTH} characters)") if text.length > MAX_TODO_LENGTH
 
-
-  todo = { id: $next_id, text: text, done: false, created_at: Time.now.to_s }
-  $next_id += 1
-  $todos << todo
+  todo = $id_mutex.synchronize do
+    id = $next_id
+    $next_id += 1
+    t = { id: id, text: text, done: false, created_at: Time.now.to_s }
+    $todos << t
+    t
+  end
   status 201
   json todo
 end
