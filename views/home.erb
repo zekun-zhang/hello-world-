@@ -16,6 +16,10 @@
     <div class="stat-value" id="stat-pending">0</div>
     <div class="stat-label">Pending</div>
   </div>
+  <div class="stat">
+    <div class="stat-value" id="stat-time">-</div>
+    <div class="stat-label">Last Updated</div>
+  </div>
 </div>
 
 <div class="grid-2">
@@ -70,6 +74,7 @@
       document.getElementById('stat-total').textContent = data.total;
       document.getElementById('stat-done').textContent = data.done;
       document.getElementById('stat-pending').textContent = data.pending;
+      document.getElementById('stat-time').textContent = new Date().toLocaleTimeString();
     } catch(e) {}
   }
 

@@ -5,7 +5,7 @@ Dir.mkdir(public_dir) unless Dir.exist?(public_dir)
 
 server = WEBrick::HTTPServer.new(
   Port: 8080,
-  DocumentRoot: public_dir
+  DocumentRoot: File.join(File.dirname(__FILE__), 'public')
 )
 
 trap('INT') { server.shutdown }
